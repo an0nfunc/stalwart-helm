@@ -42,6 +42,7 @@ ingress:
 # -- Optional Gateway API HTTPRoute for HTTP management UI
 httpRoute:
   enabled: false
+  annotations: {}
   parentRefs: []
   #  - name: default
   #    namespace: nginx-gateway
