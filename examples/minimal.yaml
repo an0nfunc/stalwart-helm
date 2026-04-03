@@ -1,0 +1,7 @@
+# Minimal Stalwart deployment - just override the hostname
+config:
+  server:
+    hostname: "mail.example.com"
+  authentication:
+    fallback-admin:
+      secret: "change-this-password"

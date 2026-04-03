@@ -1,0 +1,16 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "fileMatch": ["chart/stalwart/Chart\\.yaml$"],
+      "matchStrings": ["appVersion: \"(?<currentValue>.+?)\""],
+      "depNameTemplate": "stalwartlabs/stalwart",
+      "datasourceTemplate": "docker",
+      "extractVersionTemplate": "^v(?<version>.+)-alpine$"
+    }
+  ]
+}

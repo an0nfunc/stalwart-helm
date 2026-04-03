@@ -1,0 +1,11 @@
+{{- if .Values.config }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "stalwart.fullname" . }}-config
+  labels:
+    {{- include "stalwart.labels" . | nindent 4 }}
+data:
+  config.toml: |
+    {{- include "stalwart.toToml" (list .Values.config "") | nindent 4 }}
+{{- end }}

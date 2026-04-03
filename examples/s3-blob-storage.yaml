@@ -1,0 +1,51 @@
+# Stalwart with S3 blob storage
+# Requires a Secret with S3 credentials:
+#   kubectl create secret generic stalwart-secrets \
+#     --from-literal=S3_ACCESS_KEY=... \
+#     --from-literal=S3_SECRET_KEY=... \
+#     --from-literal=ADMIN_PASSWORD=...
+
+config:
+  server:
+    hostname: "mail.example.com"
+
+  storage:
+    data: "rocksdb"
+    fts: "rocksdb"
+    blob: "s3"
+    lookup: "rocksdb"
+    directory: "internal"
+
+  store:
+    rocksdb:
+      type: "rocksdb"
+      path: "/data"
+      compression: "lz4"
+    s3:
+      type: "s3"
+      bucket: "my-mail-bucket"
+      region: "us-east-1"
+      endpoint: "https://s3.example.com"
+      access-key: "%{env:S3_ACCESS_KEY}%"
+      secret-key: "%{env:S3_SECRET_KEY}%"
+
+  directory:
+    internal:
+      type: "internal"
+      store: "rocksdb"
+
+  authentication:
+    fallback-admin:
+      user: "admin"
+      secret: "%{env:ADMIN_PASSWORD}%"
+
+  tracer:
+    stdout:
+      enable: true
+      type: "stdout"
+      level: "info"
+      ansi: false
+
+envFrom:
+  - secretRef:
+      name: stalwart-secrets

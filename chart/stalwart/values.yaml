@@ -1,0 +1,171 @@
+# Stalwart Mail Server Helm Chart
+# https://stalw.art/docs/
+
+image:
+  repository: stalwartlabs/stalwart
+  # Defaults to "v<appVersion>-alpine" if not set
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+replicas: 1
+
+# -- Mail service configuration
+service:
+  type: ClusterIP
+  annotations: {}
+  ports:
+    smtp: 25
+    submission: 587
+    imap: 143
+    imaps: 993
+    https: 443
+
+# -- Optional Ingress for HTTP management UI
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts: []
+  #  - host: mail.example.com
+  #    paths:
+  #      - path: /
+  #        pathType: Prefix
+  tls: []
+  #  - secretName: mail-tls
+  #    hosts:
+  #      - mail.example.com
+
+# -- Optional Gateway API HTTPRoute for HTTP management UI
+httpRoute:
+  enabled: false
+  parentRefs: []
+  #  - name: default
+  #    namespace: nginx-gateway
+  hostnames: []
+  #  - mail.example.com
+
+# -- Persistent storage for RocksDB metadata
+persistence:
+  enabled: true
+  storageClass: ""
+  size: 50Gi
+  annotations: {}
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+# -- Prometheus metrics
+metrics:
+  enabled: false
+  serviceMonitor:
+    enabled: false
+    labels: {}
+    interval: 30s
+    basicAuth: {}
+    #  secretName: stalwart-metrics-auth
+    #  usernameKey: username
+    #  passwordKey: password
+
+# -- Stalwart configuration (rendered as TOML via YAML-to-TOML conversion)
+# See https://stalw.art/docs/category/configuration/ for all options.
+# Write your config as YAML here; the chart converts it to TOML automatically.
+config:
+  server:
+    hostname: "mail.example.com"
+    listener:
+      smtp:
+        bind: ["[::]:25"]
+        protocol: "smtp"
+      submission:
+        bind: ["[::]:587"]
+        protocol: "smtp"
+        tls:
+          implicit: false
+      imap:
+        bind: ["[::]:143"]
+        protocol: "imap"
+      imaps:
+        bind: ["[::]:993"]
+        protocol: "imap"
+        tls:
+          implicit: true
+      https:
+        bind: ["[::]:443"]
+        protocol: "http"
+        tls:
+          implicit: true
+      http:
+        bind: ["[::]:8080"]
+        protocol: "http"
+  storage:
+    data: "rocksdb"
+    fts: "rocksdb"
+    blob: "rocksdb"
+    lookup: "rocksdb"
+    directory: "internal"
+  store:
+    rocksdb:
+      type: "rocksdb"
+      path: "/data"
+      compression: "lz4"
+  directory:
+    internal:
+      type: "internal"
+      store: "rocksdb"
+  authentication:
+    fallback-admin:
+      user: "admin"
+      secret: "changeme"
+  tracer:
+    stdout:
+      enable: true
+      type: "stdout"
+      level: "info"
+      ansi: false
+
+# -- Environment variables from Secrets/ConfigMaps
+envFrom: []
+#  - secretRef:
+#      name: stalwart-secrets
+
+# -- Additional pod labels
+podLabels: {}
+
+# -- Additional pod annotations
+podAnnotations: {}
+
+# -- Priority class name
+priorityClassName: ""
+
+# -- Node affinity rules
+affinity: {}
+
+# -- Node tolerations
+tolerations: []
+
+# -- Node selector
+nodeSelector: {}
+
+# -- Pod security context
+podSecurityContext: {}
+
+# -- Container security context
+securityContext: {}
+
+# -- Extra volume mounts for the stalwart container
+extraVolumeMounts: []
+
+# -- Extra volumes for the pod
+extraVolumes: []
+
+# -- Init containers
+initContainers: []

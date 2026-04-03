@@ -1,0 +1,22 @@
+Stalwart Mail Server has been deployed.
+
+Access the admin UI:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "stalwart.fullname" . }} 8080:8080
+
+Then open http://localhost:8080 in your browser.
+
+Check health:
+
+  kubectl -n {{ .Release.Namespace }} exec {{ include "stalwart.fullname" . }}-0 -- curl -s http://localhost:8080/healthz/live
+
+{{- if not .Values.persistence.enabled }}
+
+WARNING: Persistence is disabled. Data will be lost when the pod restarts.
+{{- end }}
+
+Next steps:
+  - Configure TLS (ACME or bring your own certificates)
+  - Set up DNS records (MX, SPF, DKIM, DMARC)
+  - Create mail accounts via the admin UI
+  - Review https://stalw.art/docs/ for full configuration options

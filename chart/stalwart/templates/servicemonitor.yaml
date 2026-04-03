@@ -1,0 +1,31 @@
+{{- if and .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "stalwart.fullname" . }}
+  labels:
+    {{- include "stalwart.labels" . | nindent 4 }}
+    {{- with .Values.metrics.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "stalwart.selectorLabels" . | nindent 6 }}
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: {{ .Values.metrics.serviceMonitor.interval | default "30s" }}
+      {{- if .Values.metrics.serviceMonitor.basicAuth }}
+      basicAuth:
+        username:
+          name: {{ .Values.metrics.serviceMonitor.basicAuth.secretName }}
+          key: {{ .Values.metrics.serviceMonitor.basicAuth.usernameKey }}
+        password:
+          name: {{ .Values.metrics.serviceMonitor.basicAuth.secretName }}
+          key: {{ .Values.metrics.serviceMonitor.basicAuth.passwordKey }}
+      {{- end }}
+{{- end }}

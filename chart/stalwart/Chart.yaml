@@ -1,0 +1,21 @@
+apiVersion: v2
+name: stalwart
+description: Helm chart for Stalwart Mail Server with YAML-to-TOML config conversion
+type: application
+version: 0.1.0
+appVersion: "0.15.5"
+kubeVersion: ">= 1.26.0"
+home: https://github.com/an0nfunc/stalwart-helm
+sources:
+  - https://github.com/an0nfunc/stalwart-helm
+  - https://github.com/stalwartlabs/stalwart
+maintainers:
+  - name: an0nfunc
+    url: https://github.com/an0nfunc
+keywords:
+  - stalwart
+  - mail-server
+  - smtp
+  - imap
+  - jmap
+  - email
