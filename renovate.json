@@ -10,7 +10,9 @@
       "managerFilePatterns": [
         "/chart/stalwart/Chart\\.yaml$/"
       ],
-      "matchStrings": ["appVersion: \"(?<currentValue>.+?)\""],
+      "matchStrings": [
+        "appVersion: \"(?<currentValue>.+?)\""
+      ],
       "depNameTemplate": "stalwartlabs/stalwart",
       "datasourceTemplate": "docker",
       "extractVersionTemplate": "^v(?<version>.+)-alpine$"
@@ -18,21 +20,66 @@
   ],
   "packageRules": [
     {
+      "description": "Soak period before an update is eligible. Scoped by datasource on purpose: minimumReleaseAgeBehaviour defaults to timestamp-required, so a bare global value would withhold FOREVER anything whose datasource reports no release timestamp. docker is excluded for that reason (it reports a timestamp only for Docker Hub), which does mean container images get no soak and rely on review instead.",
+      "matchDatasources": [
+        "go",
+        "maven",
+        "pypi",
+        "crate",
+        "nuget",
+        "rubygems",
+        "packagist",
+        "hex",
+        "helm"
+      ],
+      "minimumReleaseAge": "3 days"
+    },
+    {
+      "description": "npm is where automated, worm-style compromises actually land, and an npm patch is rarely urgent. Does not cover transitive deps: lockfile regeneration re-resolves a bumped package's own ranges with no soak.",
+      "matchDatasources": [
+        "npm"
+      ],
+      "minimumReleaseAge": "7 days"
+    },
+    {
       "description": "Auto-merge patch updates of all deps once CI passes.",
-      "matchUpdateTypes": ["patch", "digest", "pin", "pinDigest"],
+      "matchUpdateTypes": [
+        "patch",
+        "digest",
+        "pin",
+        "pinDigest"
+      ],
       "automerge": true
     },
     {
-      "description": "Stalwart server is the chart's whole purpose — every bump (incl. patch) needs human review since it's a deployed mail server.",
-      "matchPackageNames": ["stalwartlabs/stalwart"],
+      "description": "Stalwart server is the chart's whole purpose \u2014 every bump (incl. patch) needs human review since it's a deployed mail server.",
+      "matchPackageNames": [
+        "stalwartlabs/stalwart"
+      ],
       "automerge": false,
-      "addLabels": ["needs-review"]
+      "addLabels": [
+        "needs-review"
+      ]
     },
     {
       "description": "Minor and major bumps are reviewed manually.",
-      "matchUpdateTypes": ["minor", "major"],
+      "matchUpdateTypes": [
+        "minor",
+        "major"
+      ],
       "automerge": false,
-      "addLabels": ["needs-review"]
+      "addLabels": [
+        "needs-review"
+      ]
     }
-  ]
+  ],
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "schedule": [
+      "at any time"
+    ],
+    "addLabels": [
+      "security"
+    ]
+  }
 }
