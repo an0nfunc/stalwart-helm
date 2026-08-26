@@ -108,6 +108,8 @@ envFrom:
 | `extraVolumeMounts` | `[]` | Additional volume mounts |
 | `extraVolumes` | `[]` | Additional volumes |
 | `initContainers` | `[]` | Init containers |
+| `command` | `[]` | Override the container entrypoint |
+| `args` | `[]` | Override the container arguments |
 
 See [values.yaml](chart/stalwart/values.yaml) for all available options.
 
@@ -123,6 +125,41 @@ helm install stalwart oci://ghcr.io/itsh-cloud/charts/stalwart \
   -f examples/s3-blob-storage.yaml \
   --namespace mail --create-namespace
 ```
+
+### Raising the open-file limit
+
+Container runtimes commonly set the `nofile` soft limit to 1024 while leaving a
+much higher hard limit. That is low for a mail server, which holds a file
+descriptor per SMTP, IMAP and outbound connection, and Stalwart does not raise
+the soft limit itself. Once exhausted it fails connections and DNS lookups with
+`No file descriptors available (os error 24)`.
+
+Check what your runtime gives the container:
+
+```bash
+kubectl exec -n mail stalwart-0 -- grep 'open files' /proc/1/limits
+```
+
+Raising the soft limit up to the hard limit needs no extra privileges. Because
+Kubernetes has no field for it, wrap the entrypoint:
+
+```yaml
+command: ["/bin/sh", "-c"]
+args:
+  - exec /usr/local/bin/stalwart --config /opt/stalwart/etc/config.toml
+```
+
+with the limit applied first:
+
+```yaml
+command: ["/bin/sh", "-c"]
+args:
+  - ulimit -n 65535 && exec /usr/local/bin/stalwart --config /opt/stalwart/etc/config.toml
+```
+
+The binary and config paths must match the image, so re-check them when changing
+`image.tag`. Prefer raising the runtime's default if you can, since that fixes
+every workload on the node rather than this one.
 
 ## Upgrading
 
