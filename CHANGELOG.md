@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.3.0
+
+- The container entrypoint and arguments can now be overridden with `command`
+  and `args`. Both default to empty, so the image's own entrypoint is used
+  unless you set them.
+
+  The motivating case is the `nofile` soft limit. Runtimes commonly default it
+  to 1024 against a far higher hard limit, which a mail server exhausts under
+  load, failing connections and DNS lookups with `No file descriptors available
+  (os error 24)`. Stalwart does not raise the limit itself and Kubernetes has no
+  field for it, so the entrypoint has to be wrapped. The README carries the
+  recipe.
+
 ## v0.2.2
 
 - The project moved from `an0nfunc` to the `itsh-cloud` organisation. A GitHub

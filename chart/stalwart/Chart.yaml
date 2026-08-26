@@ -2,7 +2,7 @@ apiVersion: v2
 name: stalwart
 description: Helm chart for Stalwart Mail Server with YAML-to-TOML config conversion
 type: application
-version: 0.2.2
+version: 0.3.0
 appVersion: "0.15.5"
 kubeVersion: ">= 1.26.0"
 home: https://github.com/itsh-cloud/stalwart-helm

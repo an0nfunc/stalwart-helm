@@ -166,6 +166,15 @@ tolerations: []
 # -- Node selector
 nodeSelector: {}
 
+# -- Override the container entrypoint. Empty uses the image's own entrypoint.
+# Setting this replaces the entrypoint entirely, so the command you supply is
+# responsible for starting Stalwart with its config path. See the README for the
+# open-file-limit recipe, the most common reason to set this.
+command: []
+
+# -- Arguments passed to the container. Empty uses the image's own arguments.
+args: []
+
 # -- Pod security context
 podSecurityContext: {}
 
