@@ -1,16 +1,6 @@
 {{- if .Values.config }}
-{{- $auth := dict }}
-{{- if hasKey .Values.config "authentication" }}{{ $auth = index .Values.config "authentication" }}{{ end }}
-{{- $fa := dict }}
-{{- if hasKey $auth "fallback-admin" }}{{ $fa = index $auth "fallback-admin" }}{{ end }}
-{{- if kindIs "map" $fa }}
-{{- $secret := index $fa "secret" }}
-{{- if not $secret }}
-{{- fail "config.authentication.fallback-admin.secret must be set (use a strong password or '%{env:VAR}' reference). See chart values.yaml for guidance." }}
-{{- end }}
-{{- if eq (toString $secret) "changeme" }}
-{{- fail "config.authentication.fallback-admin.secret is set to the placeholder 'changeme'. Pick a real password or use an env-var reference." }}
-{{- end }}
+{{- if not (hasKey .Values.config "@type") }}
+{{- fail "config must be a Stalwart DataStore object and requires an \"@type\" discriminator, e.g. {\"@type\": \"RocksDb\", \"path\": \"/var/lib/stalwart\"}. Since 0.16 the config file holds the datastore and nothing else; every other setting lives in the datastore itself and is applied with stalwart-cli. See the chart README." }}
 {{- end }}
 apiVersion: v1
 kind: ConfigMap
@@ -19,6 +9,6 @@ metadata:
   labels:
     {{- include "stalwart.labels" . | nindent 4 }}
 data:
-  config.toml: |
-    {{- include "stalwart.toToml" (list .Values.config "") | nindent 4 }}
+  config.json: |
+    {{- .Values.config | toPrettyJson | nindent 4 }}
 {{- end }}

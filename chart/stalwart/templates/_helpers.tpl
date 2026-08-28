@@ -54,32 +54,3 @@ Container image with tag defaulting to appVersion.
 {{- define "stalwart.image" -}}
 {{ .Values.image.repository }}:{{ .Values.image.tag | default (printf "v%s-alpine" .Chart.AppVersion) }}
 {{- end }}
-
-{{/*
-Convert YAML to TOML format.
-Recursively walks a YAML map and emits flat dotted-key TOML.
-*/}}
-{{- define "stalwart.toToml" -}}
-{{- $prefix := "" -}}
-{{- if gt (len (index . 1)) 0 -}}
-{{- $prefix = index . 1 -}}
-{{- end -}}
-{{- $config := index . 0 -}}
-{{- range $key, $value := $config -}}
-{{- $fullKey := $key -}}
-{{- if gt (len $prefix) 0 -}}
-{{- $fullKey = printf "%s.%s" $prefix $key -}}
-{{- end -}}
-{{- if kindIs "map" $value }}
-{{ include "stalwart.toToml" (list $value $fullKey) }}
-{{- else if kindIs "slice" $value }}
-{{ $fullKey }} = {{ $value | toJson }}
-{{- else if kindIs "string" $value }}
-{{ $fullKey }} = {{ $value | quote }}
-{{- else if kindIs "bool" $value }}
-{{ $fullKey }} = {{ $value }}
-{{- else }}
-{{ $fullKey }} = {{ $value }}
-{{- end -}}
-{{- end -}}
-{{- end -}}

@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "stalwart chart values",
+  "type": "object",
+  "properties": {
+    "configPath": { "type": "string", "minLength": 1 },
+    "dataPath": { "type": "string", "minLength": 1 },
+    "probePort": { "type": ["string", "integer"] },
+    "replicas": { "type": "integer", "minimum": 0 },
+
+    "config": {
+      "description": "Stalwart DataStore object rendered to config.json. Tagged union on @type.",
+      "type": "object",
+      "required": ["@type"],
+      "properties": {
+        "@type": {
+          "type": "string",
+          "enum": [
+            "RocksDb",
+            "Sqlite",
+            "PostgreSql",
+            "MySql",
+            "FoundationDb"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "@type": { "enum": ["RocksDb", "Sqlite"] } },
+            "required": ["@type"]
+          },
+          "then": { "required": ["path"] }
+        },
+        {
+          "if": {
+            "properties": { "@type": { "enum": ["PostgreSql", "MySql"] } },
+            "required": ["@type"]
+          },
+          "then": { "required": ["host", "database"] }
+        }
+      ]
+    },
+
+    "recoveryMode": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "port": { "type": ["string", "integer"] },
+        "logLevel": {
+          "type": "string",
+          "enum": ["error", "warn", "info", "debug", "trace"]
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "recoveryAdmin": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "value": { "type": "string" },
+        "existingSecret": { "type": "string" },
+        "secretKey": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+
+    "persistence": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "storageClass": { "type": "string" },
+        "size": { "type": "string" },
+        "annotations": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+
+    "service": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "annotations": { "type": "object" },
+        "externalTrafficPolicy": { "type": "string", "enum": ["Cluster", "Local"] },
+        "ports": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 1, "maximum": 65535 }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "env": { "type": "array" },
+    "envFrom": { "type": "array" }
+  }
+}

@@ -1,5 +1,57 @@
 # Changelog
 
+## v0.4.0
+
+### Breaking
+
+Stalwart 0.16 replaced the TOML configuration file with a datastore-backed
+configuration model. The config file now holds a `DataStore` object and nothing
+else; listeners, TLS, queues, spam filtering, DKIM, webhooks and directories all
+live inside the datastore and are applied with `stalwart-cli`. This chart's
+YAML-to-TOML conversion has no counterpart in that model and is removed.
+
+- `config` is now a single Stalwart `DataStore` object rendered to
+  `config.json`, not a tree rendered to `config.toml`. Render fails if the
+  required `@type` discriminator is missing.
+- The `stalwart.toToml` template helper is removed.
+- The config file mounts at `/etc/stalwart/config.json` (was
+  `/opt/stalwart/etc/config.toml`), and the data directory defaults to
+  `/var/lib/stalwart` (was a hardcoded `/data`). Both are now values,
+  `configPath` and `dataPath`.
+- The `authentication.fallback-admin` render guard added in v0.2.0 is removed
+  along with the setting it guarded. 0.16 supplies the bootstrap administrator
+  through the `STALWART_RECOVERY_ADMIN` environment variable instead, which this
+  chart now models with `recoveryAdmin`.
+
+**Migration:** `helm upgrade` alone does **not** migrate a 0.15 deployment. The
+0.15 settings have to be dumped, converted and applied to the new datastore
+before the server will serve anything, and the first 0.16 boot performs a
+one-way data migration. Follow upstream's `UPGRADING/v0_16.md` and stay on
+v0.3.x until you have done so.
+
+### Added
+
+- `recoveryMode` (`enabled`, `port`, `logLevel`) sets `STALWART_RECOVERY_MODE*`,
+  which disables every background service and exposes only the management
+  listener, for applying configuration to a server that cannot start normally.
+- `recoveryAdmin` supplies `STALWART_RECOVERY_ADMIN` from a chart-created or
+  pre-existing Secret. The value is `user:password`; render fails if the
+  password begins with `$`, `_` or `{`, which Stalwart parses as a pre-hashed
+  secret rather than a password.
+- `env` for additional environment variables.
+- `probePort`, so the health probes can target a listener other than the
+  management port.
+- `values.schema.json`, which validates the `config` tagged union. A
+  misspelled `@type` previously rendered fine and produced a pod that could not
+  start.
+
+### Unchanged on purpose
+
+- `spec.serviceName`, the `volumeClaimTemplates` and the `http` container port
+  keep their names. All three are either immutable on a StatefulSet or
+  referenced by the metrics Service and the probes, so changing them would turn
+  an upgrade into a recreate or silently detach monitoring.
+
 ## v0.3.0
 
 - The container entrypoint and arguments can now be overridden with `command`

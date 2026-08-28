@@ -1,0 +1,35 @@
+# First boot of a fresh or freshly migrated 0.16 server.
+#
+# Recovery mode disables every background service and exposes only the
+# management listener, so configuration can be applied to a server that has
+# nothing to serve yet. STALWART_RECOVERY_ADMIN is the bootstrap credential.
+#
+#   helm upgrade --install stalwart . -f examples/recovery-bootstrap.yaml
+#   kubectl port-forward svc/stalwart 8080:8080
+#   stalwart-cli --url http://127.0.0.1:8080 --user admin --password <pw> \
+#       apply --file plan.ndjson
+#
+# Then redeploy with recoveryMode.enabled and recoveryAdmin.enabled set to
+# false. STALWART_RECOVERY_ADMIN authenticates outside recovery mode too, so
+# leaving it set keeps a back door open.
+
+config:
+  "@type": RocksDb
+  path: /var/lib/stalwart
+
+recoveryMode:
+  enabled: true
+  port: 8080
+  logLevel: info
+
+recoveryAdmin:
+  enabled: true
+  # Must be "user:password". A password starting with $, _ or { is parsed as a
+  # pre-hashed secret rather than a password, so the chart rejects it.
+  value: "admin:replace-this-before-installing"
+  # Or reference a Secret you manage yourself:
+  # existingSecret: stalwart-recovery
+
+persistence:
+  enabled: true
+  size: 20Gi

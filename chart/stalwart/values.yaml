@@ -80,68 +80,48 @@ metrics:
     #  usernameKey: username
     #  passwordKey: password
 
-# -- Stalwart configuration (rendered as TOML via YAML-to-TOML conversion)
-# See https://stalw.art/docs/category/configuration/ for all options.
-# Write your config as YAML here; the chart converts it to TOML automatically.
+# -- Filesystem paths inside the container.
+# Since 0.16 the config file and the data directory are separate. The defaults
+# match the upstream image; override dataPath if you are migrating a volume that
+# was mounted elsewhere (rewriting the path is not required, and not rewriting it
+# avoids the empty-store failure mode described in the README).
+configPath: /etc/stalwart/config.json
+dataPath: /var/lib/stalwart
+
+# -- Port the health probes target. This is the management listener, which is
+# the only one guaranteed to answer /healthz in recovery mode.
+probePort: http
+
+# -- Stalwart datastore, rendered to config.json.
+# Since 0.16 this file holds the DataStore and NOTHING else: every other setting
+# (listeners, TLS, queues, spam filter, directories) lives inside the datastore
+# and is applied with `stalwart-cli apply`. See the README for the migration path.
+# A tagged union: the "@type" discriminator is required.
 config:
-  server:
-    hostname: "mail.example.com"
-    listener:
-      smtp:
-        bind: ["[::]:25"]
-        protocol: "smtp"
-      submission:
-        bind: ["[::]:587"]
-        protocol: "smtp"
-        tls:
-          implicit: false
-      imap:
-        bind: ["[::]:143"]
-        protocol: "imap"
-      imaps:
-        bind: ["[::]:993"]
-        protocol: "imap"
-        tls:
-          implicit: true
-      https:
-        bind: ["[::]:443"]
-        protocol: "http"
-        tls:
-          implicit: true
-      http:
-        bind: ["[::]:8080"]
-        protocol: "http"
-  storage:
-    data: "rocksdb"
-    fts: "rocksdb"
-    blob: "rocksdb"
-    lookup: "rocksdb"
-    directory: "internal"
-  store:
-    rocksdb:
-      type: "rocksdb"
-      path: "/data"
-      compression: "lz4"
-  directory:
-    internal:
-      type: "internal"
-      store: "rocksdb"
-  # authentication.fallback-admin must be configured before installing.
-  # No default is provided to prevent accidentally deploying with publicly-known credentials.
-  # Set authentication.fallback-admin.secret to a strong password (or reference an env-var
-  # via "%{env:VAR}" syntax and supply VAR via envFrom below), or remove the fallback-admin
-  # block entirely if you have other admin auth configured.
-  # Example:
-  # authentication:
-  #   fallback-admin:
-  #     user: "admin"
-  #     secret: "%{env:STALWART_FALLBACK_ADMIN_SECRET}"
-  tracer:
-    stdout:
-      enable: true
-      type: "stdout"
-      level: "info"
-      ansi: false
+  "@type": RocksDb
+  path: /var/lib/stalwart
+
+# -- Recovery mode. Disables every background service and exposes only the
+# management listener, so an operator can apply configuration to a server that
+# cannot start normally. Never leave this on in steady state.
+recoveryMode:
+  enabled: false
+  port: 8080
+  logLevel: info
+
+# -- Recovery administrator, supplied as STALWART_RECOVERY_ADMIN ("user:password").
+# This is a back door: it authenticates even outside recovery mode. Enable it to
+# bootstrap a fresh or freshly migrated server, then disable it and redeploy.
+recoveryAdmin:
+  enabled: false
+  # -- "user:password". Ignored when existingSecret is set.
+  value: ""
+  # -- Reference a Secret you manage instead of having the chart create one.
+  existingSecret: ""
+  secretKey: STALWART_RECOVERY_ADMIN
+
+# -- Additional environment variables
+env: []
 
 # -- Environment variables from Secrets/ConfigMaps
 envFrom: []

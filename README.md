@@ -4,11 +4,18 @@
 [![License](https://img.shields.io/github/license/itsh-cloud/stalwart-helm)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/itsh-cloud/stalwart-helm)](https://github.com/itsh-cloud/stalwart-helm/releases)
 
-Helm chart for [Stalwart Mail Server](https://stalw.art/) with YAML-to-TOML config conversion.
+Helm chart for [Stalwart Mail Server](https://stalw.art/).
+
+> **Chart 0.4.0 targets Stalwart 0.16+.** 0.16 replaced the TOML configuration
+> file with a datastore-backed model, so the YAML-to-TOML conversion that earlier
+> chart versions provided no longer has anything to convert. Deployments still on
+> Stalwart 0.15.x should stay on chart 0.3.x. `helm upgrade` alone does **not**
+> migrate a 0.15 deployment: see [UPGRADING/v0_16.md](https://github.com/stalwartlabs/stalwart/blob/main/UPGRADING/v0_16.md).
 
 ## Features
 
-- **YAML-to-TOML config** - Write your Stalwart configuration as native YAML in `values.yaml`; the chart automatically renders it to TOML. No more escaping TOML in ConfigMaps.
+- **Datastore bootstrap** - `config` renders to the small `config.json` that 0.16 reads at startup, with schema validation on the tagged union so a misspelled `@type` fails at render rather than at pod start.
+- **Recovery mode** - first-class support for booting with only the management listener to apply configuration to a server that cannot start normally.
 - **StatefulSet** with RocksDB persistence and health probes (startup, liveness, readiness)
 - **Optional Prometheus metrics** with ServiceMonitor support (including BasicAuth)
 - **Optional Ingress and HTTPRoute** templates for the management UI
@@ -39,52 +46,58 @@ Access the admin UI:
 
 ```bash
 kubectl -n mail port-forward svc/stalwart 8080:8080
-# Open http://localhost:8080 (default: admin / changeme)
+# Open http://localhost:8080
 ```
 
-## YAML-to-TOML Configuration
+## Configuration
 
-This chart's key feature is native YAML configuration. Instead of embedding raw TOML in a ConfigMap, you write Stalwart's configuration as YAML under the `config:` key in your values file. The chart's template engine converts it to TOML automatically.
+Since Stalwart 0.16 the configuration file holds a **DataStore object and
+nothing else**. Listeners, TLS, queues, spam filtering, DKIM, webhooks and
+directories all live inside the datastore itself and are managed with
+[`stalwart-cli`](https://github.com/stalwartlabs/cli) or the WebUI, not by this
+chart.
 
-**Example** - your `values.yaml`:
+So `config` here is the bootstrap datastore, rendered to `config.json`:
 
 ```yaml
 config:
-  server:
-    hostname: "mail.example.com"
-  storage:
-    data: "rocksdb"
-    blob: "s3"
-  store:
-    s3:
-      type: "s3"
-      bucket: "my-mail-bucket"
-      endpoint: "https://s3.example.com"
+  "@type": RocksDb
+  path: /var/lib/stalwart
 ```
 
-**Rendered** `config.toml`:
+The `@type` discriminator is required and validated against
+`values.schema.json`; a typo fails the render instead of producing a pod that
+cannot start.
 
-```toml
-server.hostname = "mail.example.com"
-storage.data = "rocksdb"
-storage.blob = "s3"
-store.s3.type = "s3"
-store.s3.bucket = "my-mail-bucket"
-store.s3.endpoint = "https://s3.example.com"
-```
+### Applying the rest of the configuration
 
-Stalwart supports environment variable substitution in config values using `%{env:VAR_NAME}%` syntax. Combine this with `envFrom` to inject secrets:
+Boot once in recovery mode, apply a plan, then redeploy without it:
 
 ```yaml
-config:
-  authentication:
-    fallback-admin:
-      secret: "%{env:ADMIN_PASSWORD}%"
-
-envFrom:
-  - secretRef:
-      name: stalwart-secrets
+recoveryMode:
+  enabled: true
+recoveryAdmin:
+  enabled: true
+  value: "admin:choose-a-real-password"
 ```
+
+```bash
+kubectl -n mail port-forward svc/stalwart 8080:8080
+stalwart-cli --url http://127.0.0.1:8080 --user admin --password ... apply --file plan.ndjson
+```
+
+Then set both back to `false` and upgrade again. `STALWART_RECOVERY_ADMIN`
+authenticates even outside recovery mode, so it is a back door and must not be
+left enabled.
+
+### Paths
+
+`configPath` and `dataPath` default to `/etc/stalwart/config.json` and
+`/var/lib/stalwart`, matching the upstream image. If you are upgrading a
+deployment whose volume is mounted elsewhere, set `dataPath` to the existing
+mount and point `config.path` at the same place. Rewriting the path is not
+required, and a mismatch between the two is the documented way to end up with a
+server that starts cleanly against an empty store.
 
 ## Configuration
 
@@ -103,7 +116,13 @@ envFrom:
 | `persistence.size` | `50Gi` | Volume size |
 | `metrics.enabled` | `false` | Enable Prometheus metrics service |
 | `metrics.serviceMonitor.enabled` | `false` | Create ServiceMonitor |
-| `config` | *(minimal RocksDB config)* | Stalwart config as YAML (rendered to TOML) |
+| `config` | *(RocksDb at /var/lib/stalwart)* | Bootstrap DataStore object, rendered to `config.json` |
+| `configPath` | `/etc/stalwart/config.json` | Where `config.json` is mounted |
+| `dataPath` | `/var/lib/stalwart` | Where the data volume is mounted |
+| `probePort` | `http` | Port the health probes target |
+| `recoveryMode.enabled` | `false` | Boot with only the management listener |
+| `recoveryAdmin.enabled` | `false` | Supply `STALWART_RECOVERY_ADMIN` (a back door) |
+| `env` | `[]` | Additional environment variables |
 | `envFrom` | `[]` | Environment variable sources |
 | `extraVolumeMounts` | `[]` | Additional volume mounts |
 | `extraVolumes` | `[]` | Additional volumes |

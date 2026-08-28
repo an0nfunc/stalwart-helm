@@ -77,6 +77,27 @@ spec:
               containerPort: {{ $port }}
               protocol: TCP
             {{- end }}
+          {{- if or .Values.recoveryAdmin.enabled .Values.recoveryMode.enabled .Values.env }}
+          env:
+            {{- if .Values.recoveryMode.enabled }}
+            - name: STALWART_RECOVERY_MODE
+              value: "1"
+            - name: STALWART_RECOVERY_MODE_PORT
+              value: {{ .Values.recoveryMode.port | quote }}
+            - name: STALWART_RECOVERY_MODE_LOG_LEVEL
+              value: {{ .Values.recoveryMode.logLevel | quote }}
+            {{- end }}
+            {{- if .Values.recoveryAdmin.enabled }}
+            - name: STALWART_RECOVERY_ADMIN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.recoveryAdmin.existingSecret | default (printf "%s-recovery" (include "stalwart.fullname" .)) }}
+                  key: {{ .Values.recoveryAdmin.secretKey }}
+            {{- end }}
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- end }}
           {{- with .Values.envFrom }}
           envFrom:
             {{- toYaml . | nindent 12 }}
@@ -88,7 +109,7 @@ spec:
           startupProbe:
             httpGet:
               path: /healthz/live
-              port: http
+              port: {{ .Values.probePort }}
             initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 5
@@ -96,26 +117,26 @@ spec:
           livenessProbe:
             httpGet:
               path: /healthz/live
-              port: http
+              port: {{ .Values.probePort }}
             periodSeconds: 30
             timeoutSeconds: 5
             failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /healthz/ready
-              port: http
+              port: {{ .Values.probePort }}
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 6
           volumeMounts:
             {{- if .Values.persistence.enabled }}
             - name: data
-              mountPath: /data
+              mountPath: {{ .Values.dataPath }}
             {{- end }}
             {{- if .Values.config }}
             - name: config
-              mountPath: /opt/stalwart/etc/config.toml
-              subPath: config.toml
+              mountPath: {{ .Values.configPath }}
+              subPath: config.json
               readOnly: true
             {{- end }}
             {{- with .Values.extraVolumeMounts }}
