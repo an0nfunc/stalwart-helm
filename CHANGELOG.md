@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.4.1
+
+- `args` now defaults to `--config <configPath>`. 0.16 dropped the entrypoint
+  wrapper that used to supply it and the image's entrypoint is the bare binary,
+  so with 0.4.0 a deployment that did not override `args` started the container
+  with no arguments: it printed usage and exited into CrashLoopBackOff. Setting
+  `args` explicitly still overrides the default.
+
 ## v0.4.0
 
 ### Breaking

@@ -60,10 +60,16 @@ spec:
           command:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.args }}
           args:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
+            {{- if .Values.args }}
+            {{- toYaml .Values.args | nindent 12 }}
+            {{- else }}
+            {{- /* 0.16 dropped the entrypoint wrapper that used to supply this,
+                   and the image's entrypoint is the bare binary, so without a
+                   default the container prints usage and exits. */}}
+            - --config
+            - {{ .Values.configPath }}
+            {{- end }}
           {{- with .Values.securityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}
